@@ -10,6 +10,17 @@ __device__ constexpr float e = 0.541196100146197f;    // sqrt(2) * cos(3 * pi / 
 __device__ constexpr float f = 0.275899379282943f;    // sqrt(2) * cos(7 * pi / 16)
 __device__ constexpr float norm_factor = 0.3535533905932737f;  // 1 / sqrt(8)
 
+__device__ constexpr uchar2 zigzag_pattern[8][8] = {
+    { {0, 0}, {0, 1}, {0, 5}, {0, 6}, {1, 6}, {1, 7}, {3, 3}, {3, 4} },
+    { {0, 2}, {0, 4}, {0, 7}, {1, 5}, {2, 0}, {3, 2}, {3, 5}, {5, 2} },
+    { {0, 3}, {1, 0}, {1, 4}, {2, 1}, {3, 1}, {3, 6}, {5, 1}, {5, 3} },
+    { {1, 1}, {1, 3}, {2, 2}, {3, 0}, {3, 7}, {5, 0}, {5, 4}, {6, 5} },
+    { {1, 2}, {2, 3}, {2, 7}, {4, 0}, {4, 7}, {5, 5}, {6, 4}, {6, 6} },
+    { {2, 4}, {2, 6}, {4, 1}, {4, 6}, {5, 6}, {6, 3}, {6, 7}, {7, 4} },
+    { {2, 5}, {4, 2}, {4, 5}, {5, 7}, {6, 2}, {7, 0}, {7, 3}, {7, 5} },
+    { {4, 3}, {4, 4}, {6, 0}, {6, 1}, {7, 1}, {7, 2}, {7, 6}, {7, 7} }
+};
+
 // DCT forward 1D implementation
 __device__ void dct_fwd_8x8_1d(float *vecf8, int stride,int col, bool row) 
 {
@@ -146,7 +157,6 @@ __device__ void YCbCr_hip_compute(d_float8 *Ch1_f8, d_float8 *Ch2_f8,d_float8 *C
     *Ch1_f8 =  Y_f8; 
     *Ch2_f8 =  Cb_f8;  
     *Ch3_f8 =  Cr_f8;  
-
 }
 
 __device__ void verticalDownSampling(d_float8 *Cb_f8_1, d_float8 *Cb_f8_2,d_float8 *Cr_f8_1, d_float8 *Cr_f8_2)
@@ -180,9 +190,12 @@ __device__ void horizontalDownSampling(d_float8 *Cb_f8_1, d_float8 *Cb_f8_2,d_fl
     *Cr = (evens + odds) * 0.5f;
 }
 
-__device__ __inline__ float quantize(float* value, float* coeff) {
+__device__ __inline__ float quantize(float* dup,float* value, float* coeff) {
     for(int i=0; i<8 ;i++)
-        coeff[i] * roundf(value[i] * __frcp_rn(coeff[i]));
+    {
+        value[i] = coeff[i] * roundf(value[i] * __frcp_rn(coeff[i]));
+        dup[i] = value[i];
+    }
 }
 
 template <typename T>
@@ -213,7 +226,8 @@ __global__ void jpeg_compression_distortion_pkd3_hip_tensor( T *srcPtr,
     d_float24 src_f24, dst_f24;
     // 16 Rows x 3 Channels and 16 x 8 columns with each element being a float8 
     __shared__ float src_smem[16*3][16*8];
-
+    auto& copyY= src_smem;
+    auto& copyCbCr = src_smem;
     int3 hipThreadIdx_y_channel;
     hipThreadIdx_y_channel.x = hipThreadIdx_y;
     hipThreadIdx_y_channel.y = hipThreadIdx_y + 16;
@@ -290,14 +304,39 @@ __global__ void jpeg_compression_distortion_pkd3_hip_tensor( T *srcPtr,
     __syncthreads();
     //Quantization on each layer of Y Cb Cr
     //For every 8 elements row wise, we are taking respected row in the table and doing quantization
-    //For Y
-    quantize(src_smem[hipThreadIdx_y_channel.x][hipThreadIdx_x8], &Ytable[(hipThreadIdx_y % 8) * 8]);
+    // copying same values to extra shared memory (left over space of Cb Cr)
     //For Cb Cr
-    //Here we can do this for only 8 threads in Y, this and in row wise DCT
-    quantize(src_smem[hipThreadIdx_y_channel.y][hipThreadIdx_x8], &CbCrtable[(hipThreadIdx_y % 8) * 8]);  
+    //Here we can do this for only 8 threads in Y, here and in row wise DCT
+    if(hipThreadIdx_y < 8)
+        quantize(&copyCbCr[hipThreadIdx_y_channel.y + 8][hipThreadIdx_x8],&src_smem[hipThreadIdx_y_channel.y][hipThreadIdx_x8], &CbCrtable[(hipThreadIdx_y % 8) * 8]);  
+    //For Y also
+    quantize(&copyY[hipThreadIdx_y_channel.z][hipThreadIdx_x8],&src_smem[hipThreadIdx_y_channel.x][hipThreadIdx_x8], &Ytable[(hipThreadIdx_y % 8) * 8]);
     __syncthreads();
 
+    //Zig Zag Scan
+    //Copy elements to the extra shared memory and then access as per the reference table 
+    //(DONE AS PART OF QUANTIZATION)
+    //Fill the original Y using copy Y taking the index references from the zigzag reference table
+    //Now that there are 12 blocks of 16 x 16 size (Including Y Cb Cr)
+    //Iterate over 8 tiles and in each tile map respected src to dst w.r.t ref for Y CbCr
+    int numTiles = 8;
+    for(int t = 0, offset = 0; t < numTiles; t++, offset += hipBlockDim_x)
+    {
+        int srcCol = (offset + hipThreadIdx_x);
+        if(srcCol < 128)
+        {
+            uint2 src_xy = zigzag_mat[hipThreadIdx_y_channel.z % 8][srcCol % 8];
+            int block_row = hipThreadIdx_y < 8 ? src_xy.x + 32 : 32 + 8 + src_xy.x;
+            int block_col = hipThreadIdx_x < 8 ? src_xy.y + offset : 8 + src_xy.y + offset;
 
+            src_smem[hipThreadIdx_y_channel.x][srcCol] = copyY[block_row][block_col]; 
+            //Each thread after performing Y it acts on the 8 rows of Cb and Cr also
+            if(hipThreadIdx_y < 8)                        /*duplicate CbCr from 24 to 32*/
+                src_smem[hipThreadIdx_y_channel.y][srcCol] = copyCbCr[block_row - 8][block_col];
+        }
+        __syncthreads();
+    }
+    
     //rpp_hip_pack_float24_pln3_and_store24_pln3(dstPtr + dstIdx, dstStridesNCH.y, &dst_f24);
 }
 
