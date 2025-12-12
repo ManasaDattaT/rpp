@@ -2,77 +2,6 @@
 #include "broadcast.hpp"
 #include "rpp_cpu_simd_math.hpp"
 
-inline __m256 simd_add_ps(__m256 &a, __m256 &b) { return _mm256_add_ps(a, b); }
-inline __m256 simd_subtract_ps(__m256 &a, __m256 &b) { return _mm256_sub_ps(a, b); }
-inline __m256 simd_multiply_ps(__m256 &a, __m256 &b) { return _mm256_mul_ps(a, b); }
-inline __m256 simd_divide_ps(__m256 &a, __m256 &b) { return _mm256_div_ps(a, b); }
-
-template<typename T>
-inline __m256i simd_add_si256(__m256i &a, __m256i &b)
-{
-    if constexpr (std::is_same<T, Rpp8u>::value || std::is_same<T, Rpp8s>::value)
-        return _mm256_add_epi8(a, b);
-    else if constexpr (std::is_same<T, Rpp16s>::value || std::is_same<T, Rpp16u>::value)
-        return _mm256_add_epi16(a, b);
-    else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
-        return _mm256_add_epi32(a, b);
-}
-
-template<typename T>
-inline __m256i simd_subtract_si256(__m256i &a, __m256i &b)
-{
-    if constexpr (std::is_same<T, Rpp8u>::value || std::is_same<T, Rpp8s>::value)
-        return _mm256_sub_epi8(a, b);
-    else if constexpr (std::is_same<T, Rpp16s>::value || std::is_same<T, Rpp16u>::value)
-        return _mm256_sub_epi16(a, b);
-    else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
-        return _mm256_sub_epi32(a, b);
-}
-
-template<typename T>
-inline __m256i simd_multiply_si256(__m256i &a, __m256i &b)
-{
-    if constexpr (std::is_same<T, Rpp16u>::value || std::is_same<T, Rpp16s>::value)
-        return _mm256_mullo_epi16(a, b);
-    else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
-        return _mm256_mullo_epi32(a, b);
-    else if constexpr (std::is_same<T, Rpp8u>::value)
-    {
-        printf("U8 Multiply Invoked\n");
-
-        __m256i a_lo = _mm256_unpacklo_epi8(a, avx_px0);
-        __m256i b_lo = _mm256_unpacklo_epi8(b, avx_px0);
-        __m256i a_hi = _mm256_unpackhi_epi8(a, avx_px0);
-        __m256i b_hi = _mm256_unpackhi_epi8(b, avx_px0);
-
-        __m256i prod_lo = _mm256_mullo_epi16(a_lo, b_lo);
-        __m256i prod_hi = _mm256_mullo_epi16(a_hi, b_hi);
-
-        prod_lo = _mm256_and_si256(prod_lo, avx_mask8);
-        prod_hi = _mm256_and_si256(prod_hi, avx_mask8);
-
-        return _mm256_packus_epi16(prod_lo, prod_hi);
-
-    }
-    else if constexpr (std::is_same<T, Rpp8s>::value)
-    {
-        printf("I8 Multiply Invoked\n");
-
-        __m256i a_lo = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpacklo_epi8(a, avx_px0), 8), 8);
-        __m256i b_lo = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpacklo_epi8(b, avx_px0), 8), 8);
-        __m256i a_hi = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpackhi_epi8(a, avx_px0), 8), 8);
-        __m256i b_hi = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpackhi_epi8(b, avx_px0), 8), 8);
-
-        __m256i prod_lo = _mm256_mullo_epi16(a_lo, b_lo);
-        __m256i prod_hi = _mm256_mullo_epi16(a_hi, b_hi);
-
-        prod_lo = _mm256_and_si256(prod_lo, avx_mask8);
-        prod_hi = _mm256_and_si256(prod_hi, avx_mask8);
-
-        return _mm256_packus_epi16(prod_lo, prod_hi);
-    }
-}
-
 // Arithmetic operation structures that encapsulate scalar and SIMD ops 
 template<typename T>
 struct Add
@@ -84,12 +13,17 @@ struct Add
 
     static inline __m256i simd_op(__m256i &a, __m256i &b)
     {
-        return simd_add_si256<T>(a, b);
+        if constexpr (std::is_same<T, Rpp8u>::value || std::is_same<T, Rpp8s>::value)
+            return _mm256_add_epi8(a, b);
+        else if constexpr (std::is_same<T, Rpp16s>::value || std::is_same<T, Rpp16u>::value)
+            return _mm256_add_epi16(a, b);
+        else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
+            return _mm256_add_epi32(a, b);
     }
 
-    inline void operator()(T *dst, T *src1, T *src2) const
+    static inline __m256 simd_op(__m256 &a, __m256 &b)
     {
-        scalar_op(dst, src1, src2);
+        return _mm256_add_ps(a, b);
     }
 };
 
@@ -103,12 +37,17 @@ struct Subtract
 
     static inline __m256i simd_op(__m256i &a, __m256i &b)
     {
-        return simd_subtract_si256<T>(a, b);
+        if constexpr (std::is_same<T, Rpp8u>::value || std::is_same<T, Rpp8s>::value)
+            return _mm256_sub_epi8(a, b);
+        else if constexpr (std::is_same<T, Rpp16s>::value || std::is_same<T, Rpp16u>::value)
+            return _mm256_sub_epi16(a, b);
+        else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
+            return _mm256_sub_epi32(a, b);
     }
 
-    inline void operator()(T *dst, T *src1, T *src2) const
+    static inline __m256 simd_op(__m256 &a, __m256 &b)
     {
-        scalar_op(dst, src1, src2);
+        return _mm256_sub_ps(a, b);
     }
 };
 
@@ -122,104 +61,64 @@ struct Multiply
 
     static inline __m256i simd_op(__m256i &a, __m256i &b)
     {
-        return simd_multiply_si256<T>(a, b);
-    }
+        if constexpr (std::is_same<T, Rpp16u>::value || std::is_same<T, Rpp16s>::value)
+            return _mm256_mullo_epi16(a, b);
+        else if constexpr (std::is_same<T, Rpp32s>::value || std::is_same<T, Rpp32u>::value)
+            return _mm256_mullo_epi32(a, b);
+        else if constexpr (std::is_same<T, Rpp8u>::value)
+        {
+            printf("U8 Multiply Invoked\n");
 
-    inline void operator()(T *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
-    }
-};
+            __m256i a_lo = _mm256_unpacklo_epi8(a, avx_px0);
+            __m256i b_lo = _mm256_unpacklo_epi8(b, avx_px0);
+            __m256i a_hi = _mm256_unpackhi_epi8(a, avx_px0);
+            __m256i b_hi = _mm256_unpackhi_epi8(b, avx_px0);
 
-// Arithmetic operation structures for float / float16 paths (scalar + SIMD)
-template<typename T>
-struct AddFloat
-{
-    static inline void scalar_op(T *dst, T *src1, T *src2)
-    {
-        *dst = *src1 + *src2;
-    }
+            __m256i prod_lo = _mm256_mullo_epi16(a_lo, b_lo);
+            __m256i prod_hi = _mm256_mullo_epi16(a_hi, b_hi);
 
-    static inline __m256 simd_op(__m256 &a, __m256 &b)
-    {
-        return simd_add_ps(a, b);
-    }
+            prod_lo = _mm256_and_si256(prod_lo, avx_mask8);
+            prod_hi = _mm256_and_si256(prod_hi, avx_mask8);
 
-    inline void operator()(T *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
-    }
-};
+            return _mm256_packus_epi16(prod_lo, prod_hi);
+        }
+        else if constexpr (std::is_same<T, Rpp8s>::value)
+        {
+            printf("I8 Multiply Invoked\n");
 
-template<typename T>
-struct SubtractFloat
-{
-    static inline void scalar_op(T *dst, T *src1, T *src2)
-    {
-        *dst = *src1 - *src2;
-    }
+            __m256i a_lo = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpacklo_epi8(a, avx_px0), 8), 8);
+            __m256i b_lo = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpacklo_epi8(b, avx_px0), 8), 8);
+            __m256i a_hi = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpackhi_epi8(a, avx_px0), 8), 8);
+            __m256i b_hi = _mm256_srai_epi16(_mm256_slli_epi16(_mm256_unpackhi_epi8(b, avx_px0), 8), 8);
 
-    static inline __m256 simd_op(__m256 &a, __m256 &b)
-    {
-        return simd_subtract_ps(a, b);
-    }
+            __m256i prod_lo = _mm256_mullo_epi16(a_lo, b_lo);
+            __m256i prod_hi = _mm256_mullo_epi16(a_hi, b_hi);
 
-    inline void operator()(T *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
-    }
-};
+            prod_lo = _mm256_and_si256(prod_lo, avx_mask8);
+            prod_hi = _mm256_and_si256(prod_hi, avx_mask8);
 
-template<typename T>
-struct MultiplyFloat
-{
-    static inline void scalar_op(T *dst, T *src1, T *src2)
-    {
-        *dst = *src1 * *src2;
+            return _mm256_packus_epi16(prod_lo, prod_hi);
+        }
     }
 
     static inline __m256 simd_op(__m256 &a, __m256 &b)
     {
-        return simd_multiply_ps(a, b);
-    }
-
-    inline void operator()(T *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
+        return _mm256_mul_ps(a, b);
     }
 };
 
-template<typename T>
-struct DivideFloat
+// Unified divide operation structure for different dst/src combinations
+template<typename T1, typename T2>
+struct Divide
 {
-    static inline void scalar_op(T *dst, T *src1, T *src2)
+    static inline void scalar_op(T1 *dst, T2 *src1, T2 *src2)
     {
-        *dst = *src1 / *src2;
+        *dst = static_cast<T1>(*src1) / static_cast<T1>(*src2);
     }
 
     static inline __m256 simd_op(__m256 &a, __m256 &b)
     {
-        return simd_divide_ps(a, b);
-    }
-
-    inline void operator()(T *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
-    }
-};
-
-// Divide operation structure for integer src type T and float destination
-template<typename T>
-struct DivideToFloat
-{
-    static inline void scalar_op(Rpp32f *dst, T *src1, T *src2)
-    {
-        *dst = static_cast<Rpp32f>(*src1) / static_cast<Rpp32f>(*src2);
-    }
-
-    inline void operator()(Rpp32f *dst, T *src1, T *src2) const
-    {
-        scalar_op(dst, src1, src2);
+        return _mm256_div_ps(a, b);
     }
 };
 
@@ -423,7 +322,7 @@ template<typename T1, typename T2, typename Operation>
 inline void tensor_binary_arithmetic_op_recursive(T1 *src1, T1 *src2, Rpp32u *src1Strides, Rpp32u *src2Strides, T2 *dst, Rpp32u *dstStrides, Rpp32u *dstShape, Rpp32u nDim, Operation op)
 {
     if (!nDim)
-        op(dst, src1, src2);
+        op.scalar_op(dst, src1, src2);
     else
     {
         for (int i = 0; i < *dstShape; i++)
@@ -609,7 +508,7 @@ RppStatus tensor_binary_op_f32_f32_host_tensor(Rpp32f *srcPtr1,
 #endif
                  for (; vectorLoopCount < length[0]; vectorLoopCount++)
                  {
-                     op(dstPtrTemp, srcPtrTemp1, srcPtrTemp2);
+                     op.scalar_op(dstPtrTemp, srcPtrTemp1, srcPtrTemp2);
                      srcPtrTemp2++;
                      dstPtrTemp++;
                  }
@@ -631,7 +530,7 @@ RppStatus tensor_binary_op_f32_f32_host_tensor(Rpp32f *srcPtr1,
 #endif
                  for (; vectorLoopCount < length[0]; vectorLoopCount++)
                  {
-                     op(dstPtrTemp, srcPtrTemp1, srcPtrTemp2);
+                     op.scalar_op(dstPtrTemp, srcPtrTemp1, srcPtrTemp2);
                      srcPtrTemp1++;
                      dstPtrTemp++;
                  }
@@ -932,16 +831,16 @@ RppStatus tensor_binary_op_dispatch_f32_f32_host_tensor(Rpp32f *srcPtr1,
 {
     switch(tensorOp) {
         case RPP_TENSOR_OP_ADD:
-            tensor_binary_op_f32_f32_host_tensor<AddFloat<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, AddFloat<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+            tensor_binary_op_f32_f32_host_tensor<Add<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Add<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
             break;
         case RPP_TENSOR_OP_SUBTRACT:
-            tensor_binary_op_f32_f32_host_tensor<SubtractFloat<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, SubtractFloat<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+            tensor_binary_op_f32_f32_host_tensor<Subtract<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Subtract<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
             break;
         case RPP_TENSOR_OP_MULTIPLY:
-            tensor_binary_op_f32_f32_host_tensor<MultiplyFloat<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, MultiplyFloat<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+            tensor_binary_op_f32_f32_host_tensor<Multiply<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Multiply<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
             break;
         case RPP_TENSOR_OP_DIVIDE:
-            tensor_binary_op_f32_f32_host_tensor<DivideFloat<Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, DivideFloat<Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+            tensor_binary_op_f32_f32_host_tensor<Divide<Rpp32f, Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Divide<Rpp32f, Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
             break;
     }
 
@@ -1445,16 +1344,16 @@ RppStatus tensor_binary_op_dispatch_f16_f16_host_tensor(Rpp16f *srcPtr1,
     {
         switch(tensorOp) {
             case RPP_TENSOR_OP_ADD:
-                tensor_binary_op_f16_f16_host_tensor<AddFloat<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, AddFloat<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                tensor_binary_op_f16_f16_host_tensor<Add<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Add<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_SUBTRACT:
-                tensor_binary_op_f16_f16_host_tensor<SubtractFloat<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, SubtractFloat<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                tensor_binary_op_f16_f16_host_tensor<Subtract<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Subtract<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_MULTIPLY:
-                tensor_binary_op_f16_f16_host_tensor<MultiplyFloat<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, MultiplyFloat<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                tensor_binary_op_f16_f16_host_tensor<Multiply<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Multiply<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_DIVIDE:
-                tensor_binary_op_f16_f16_host_tensor<DivideFloat<Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, DivideFloat<Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                tensor_binary_op_f16_f16_host_tensor<Divide<Rpp16f, Rpp16f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Divide<Rpp16f, Rpp16f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
         }
 
@@ -2457,7 +2356,7 @@ RppStatus tensor_binary_bitwise_op_dispatch_int_host_tensor(T1 *srcPtr1,
     {
         switch(tensorOp) {
             case RPP_TENSOR_OP_DIVIDE:
-                tensor_binary_divide_host_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, DivideToFloat<T1>{}, broadcastMode, vectorIncrement, srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                tensor_binary_divide_host_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Divide<Rpp32f, T1>{}, broadcastMode, vectorIncrement, srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             default :
                 printf("Operation not supported\n");
