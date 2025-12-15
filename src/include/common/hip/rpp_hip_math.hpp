@@ -26,7 +26,7 @@ SOFTWARE.
 #define RPP_HIP_MATH_HPP
 #define RPP_HIP_MATH_DEPENDENCIES
 
-// Define operation functors with static methods
+// Arithmetic Addition operation
 struct ArithmeticAdd
 {
     template<typename T>
@@ -36,6 +36,7 @@ struct ArithmeticAdd
     }
 };
 
+// Arithmetic Subtract operation
 struct ArithmeticSubtract
 {
     template<typename T>
@@ -45,12 +46,23 @@ struct ArithmeticSubtract
     }
 };
 
+// Arithmetic Multiply operation
 struct ArithmeticMultiply
 {
     template<typename T>
     __device__ __forceinline__ static T op(T a, T b)
     {
         return a * b;
+    }
+};
+
+// Arithmetic DIVIDE operation
+template <typename T>
+struct ArithmeticDivide
+{
+    __device__ __forceinline__ static float op(T a, T b)
+    {
+        return static_cast<float>(a) / static_cast<float>(b);
     }
 };
 
