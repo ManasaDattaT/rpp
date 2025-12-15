@@ -4,16 +4,6 @@
 
 // -------------------- Set 1 - scalar helper kernels --------------------
 
-// Functor for arithmetic DIVIDE operation
-template <typename T>
-struct ArithmeticDivide
-{
-    __device__ __forceinline__ static float op(T a, T b)
-    {
-        return static_cast<float>(a) / static_cast<float>(b);
-    }
-};
-
 template <typename T> struct ArithmeticLoadStoreExecute;
 
 template<> struct ArithmeticLoadStoreExecute<uchar>
@@ -72,23 +62,13 @@ template<> struct ArithmeticLoadStoreExecute<float>
     __device__ __forceinline__ static void rpp_hip_pack_and_store8(float *dst, d_float8 *dst_f8) { rpp_hip_pack_float8_and_store8(dst, dst_f8); };
 };
 
-/*template<> struct ArithmeticLoadStoreExecute<half>
-{
-    using VectorType = d_float8;
-
-    __device__ __forceinline__ static void rpp_hip_load8(half *src, d_float8 *dst) { rpp_hip_load8_and_unpack_to_float8(src, dst); }
-    __device__ __forceinline__ static void rpp_hip_pack_and_store8(half *dst, d_float8 *dst_f8) { rpp_hip_pack_float8_and_store8(dst, dst_f8); };
-};*/
-
-
-
 template<typename VectorType, typename Operation> struct ArithmeticOperationExecute;
 
 template<typename VectorType> struct ArithmeticOperationExecute<VectorType, ArithmeticAdd>
 {
     __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_op8<ArithmeticAdd>(a, b, c);
+        rpp_hip_math_add8(a, b, c);
     }
 };
 
@@ -96,7 +76,7 @@ template<typename VectorType> struct ArithmeticOperationExecute<VectorType, Arit
 {
     __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_op8<ArithmeticSubtract>(a, b, c);
+        rpp_hip_math_subtract8(a, b, c);
     }
 };
 
@@ -104,7 +84,7 @@ template<typename VectorType> struct ArithmeticOperationExecute<VectorType, Arit
 {
     __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_op8<ArithmeticMultiply>(a, b, c);
+        rpp_hip_math_multiply8(a, b, c);
     }
 };
 
