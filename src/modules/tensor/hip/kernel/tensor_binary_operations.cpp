@@ -4,34 +4,12 @@
 
 // -------------------- Set 1 - scalar helper kernels --------------------
 
-// Functor for arithmetic ADD operation
-template <typename T>
-struct ArithmeticAdd {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a + b;
-    }
-};
-
-// Functor for arithmetic SUBTRACT operation
-template <typename T>
-struct ArithmeticSubtract {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a - b;
-    }
-};
-
-// Functor for arithmetic MULTIPLY operation
-template <typename T>
-struct ArithmeticMultiply {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a * b;
-    }
-};
-
 // Functor for arithmetic DIVIDE operation
 template <typename T>
-struct ArithmeticDivide {
-    __device__ __forceinline__ float operator()(T a, T b) const {
+struct ArithmeticDivide
+{
+    __device__ __forceinline__ static float op(T a, T b)
+    {
         return static_cast<float>(a) / static_cast<float>(b);
     }
 };
@@ -104,12 +82,39 @@ template<> struct ArithmeticLoadStoreExecute<float>
 
 
 
-template<typename VectorType, typename OpInstance> struct ArithmeticOperationExecute;
+template<typename VectorType, typename Operation> struct ArithmeticOperationExecute;
 
-template<typename VectorType, typename T> struct ArithmeticOperationExecute<VectorType, ArithmeticAdd<T>>  { __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_add8 (a, b, c);} };
-template<typename VectorType, typename T> struct ArithmeticOperationExecute<VectorType, ArithmeticSubtract<T>> { __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_subtract8(a, b, c);} };
-template<typename VectorType, typename T> struct ArithmeticOperationExecute<VectorType, ArithmeticMultiply<T>> { __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_multiply8(a, b, c);} };
-template<typename VectorType, typename T> struct ArithmeticOperationExecute<VectorType, ArithmeticDivide<T>> { __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, d_float8 *c){ rpp_hip_math_divide8(a, b, c);} };
+template<typename VectorType> struct ArithmeticOperationExecute<VectorType, ArithmeticAdd>
+{
+    __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_op8<ArithmeticAdd>(a, b, c);
+    }
+};
+
+template<typename VectorType> struct ArithmeticOperationExecute<VectorType, ArithmeticSubtract>
+{
+    __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_op8<ArithmeticSubtract>(a, b, c);
+    }
+};
+
+template<typename VectorType> struct ArithmeticOperationExecute<VectorType, ArithmeticMultiply>
+{
+    __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_op8<ArithmeticMultiply>(a, b, c);
+    }
+};
+
+template<typename VectorType, typename T> struct ArithmeticOperationExecute<VectorType, ArithmeticDivide<T>>
+{
+    __device__ __forceinline__ static void rpp_hip_math_arithmeticOp8(VectorType *a, VectorType *b, d_float8 *c)
+    {
+        rpp_hip_math_divide8(a, b, c);
+    }
+};
 
 // -------------------- Set 2 - bitwise operation kernels --------------------
 
@@ -181,7 +186,7 @@ __global__ void tensor_op_tensor_1d_hip_tensor(T1 *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 
@@ -293,7 +298,7 @@ __global__ void tensor_op_tensor_2d_hip_tensor(T1 *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 }
@@ -403,7 +408,7 @@ __global__ void tensor_op_tensor_3d_hip_tensor(T1 *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 }
@@ -490,7 +495,7 @@ __global__ void tensor_op_tensor_nd_hip_tensor(T1 *srcPtr1,
     srcIdx1 += src1BeginOffsets[id_z];
     srcIdx2 += src2BeginOffsets[id_z];
 
-    dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+    dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
 }
 
 template <typename T1, typename T2, typename Operation>
@@ -920,13 +925,13 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
             switch(tensorOp)
             {
                 case RPP_TENSOR_OP_ADD:
-                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticAdd<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticAdd(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 case RPP_TENSOR_OP_SUBTRACT:
-                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticSubtract<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticSubtract(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 case RPP_TENSOR_OP_MULTIPLY:
-                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 default :
                     printf("Operation not supported\n");
@@ -953,13 +958,13 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
             switch(tensorOp)
             {
                 case RPP_TENSOR_OP_ADD:
-                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticAdd<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticAdd(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 case RPP_TENSOR_OP_SUBTRACT:
-                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticSubtract<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticSubtract(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 case RPP_TENSOR_OP_MULTIPLY:
-                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                    hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
                 default :
                     printf("Operation not supported\n");
