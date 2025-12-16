@@ -47,26 +47,11 @@ def get_log_file_list():
         outFolderPath + "/OUTPUT_PERFORMANCE_MISC_LOGS_HOST_" + timestamp + "/Tensor_misc_host_raw_performance_log.txt",
     ]
 
-<<<<<<< HEAD
 def run_unit_test_cmd(numDims, case, numRuns, testType, toggle, batchSize, outFilePath, bitDepths, additionalArg):
     for bitDepth in bitDepths:
         print("\n./Tensor_misc_host " + str(case) + " " + str(testType) + " " + str(toggle) + " " + str(numDims) + " " + str(batchSize) + " " + str(numRuns) + " " + str(bitDepth) + " " + str(additionalArg))
         result = subprocess.Popen([buildFolderPath + "/build/Tensor_misc_host", str(case), str(testType), str(toggle), str(numDims), str(batchSize), str(numRuns), str(bitDepth), str(additionalArg), outFilePath, scriptPath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)    # nosec
         log_detected(result, errorLog, miscAugmentationMap[int(case)][0], get_bit_depth(int(bitDepth)), get_misc_func_name(int(case), numDims, additionalArg))
-=======
-def run_unit_test_cmd(numDims, case, numRuns, testType, toggle, batchSize, outFilePath, additionalArg):
-    bitDepths = list(BitDepthTestMode)
-    if testType == TestType.UNIT_TEST.value:
-        bitDepths = [BitDepthTestMode.U8_TO_U8, BitDepthTestMode.F32_TO_F32]
-        if miscAugmentationMap[int(case)][0] == "log":
-            bitDepths = [BitDepthTestMode.U8_TO_F32, BitDepthTestMode.F32_TO_F32]
-        if miscAugmentationMap[int(case)][0] == "log1p":
-            bitDepths = [BitDepthTestMode.I16_TO_F32]
-    for bitDepth in bitDepths:
-        print("\n./Tensor_misc_host " + str(case) + " " + str(testType) + " " + str(toggle) + " " + str(numDims) + " " + str(batchSize) + " " + str(numRuns) + " " + str(additionalArg))
-        result = subprocess.Popen([buildFolderPath + "/build/Tensor_misc_host", str(case), str(testType), str(toggle), str(numDims), str(batchSize), str(numRuns), str(bitDepth.value), str(additionalArg), outFilePath, scriptPath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)    # nosec
-        log_detected(result, errorLog, miscAugmentationMap[int(case)][0], get_bit_depth(int(bitDepth.value)), get_misc_func_name(int(case), numDims, additionalArg))
->>>>>>> abishek/ar/test_suite_upgrade_11_misc_suite
         print("------------------------------------------------------------------------------------------")
 
 def run_performance_test_cmd(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, bitDepth, outFilePath, additionalArg):
@@ -77,7 +62,6 @@ def run_performance_test_cmd(loggingFolder, numDims, case, numRuns, testType, to
         log_detected(process, errorLog, miscAugmentationMap[int(case)][0], get_bit_depth(int(bitDepth)), get_misc_func_name(int(case), numDims, additionalArg))
 
 def run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, additionalArg = ""):
-<<<<<<< HEAD
     bitDepths = [0, 2]
     if int(case) == 11:
         bitDepths = [2, 4]
@@ -93,20 +77,8 @@ def run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize,
         run_unit_test_cmd(numDims, case, numRuns, testType, toggle, batchSize, outFilePath, bitDepths, additionalArg)
     elif testType == 1:
         print("\n")
-=======
-    if testType == TestType.UNIT_TEST.value:
-        run_unit_test_cmd(numDims, case, numRuns, testType, toggle, batchSize, outFilePath, additionalArg)
-    elif testType == TestType.PERFORMANCE_TEST.value:
-        print("\n")
-        # U8, F16, F32 and I8 bit depths available for augmentations. Log and Log1p cases customized to run with available bit depths
-        bitDepths = [BitDepthTestMode.U8_TO_U8, BitDepthTestMode.F16_TO_F16, BitDepthTestMode.U8_TO_U8, BitDepthTestMode.F32_TO_F32, BitDepthTestMode.U8_TO_U8, BitDepthTestMode.I8_TO_I8]
-        if miscAugmentationMap[int(case)][0] == "log":
-            bitDepths = [BitDepthTestMode.U8_TO_F32, BitDepthTestMode.F16_TO_F16, BitDepthTestMode.F32_TO_F32, BitDepthTestMode.I8_TO_I8]
-        if miscAugmentationMap[int(case)][0] == "log1p":
-            bitDepths = [BitDepthTestMode.I16_TO_F32]
->>>>>>> abishek/ar/test_suite_upgrade_11_misc_suite
         for bitDepth in bitDepths:
-            run_performance_test_cmd(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, bitDepth.value, outFilePath, additionalArg)
+            run_performance_test_cmd(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, bitDepth, outFilePath, additionalArg)
 
 # Parse and validate command-line arguments for the RPP test suite
 def rpp_test_suite_parser_and_validator():
@@ -179,26 +151,22 @@ numRuns = args.num_runs
 batchSize = args.batch_size
 qaMode = args.qa_mode
 if qaMode:
-<<<<<<< HEAD
     testType = 0
 broadcast = args.broadcast
-=======
-    testType = TestType.UNIT_TEST.value
->>>>>>> abishek/ar/test_suite_upgrade_11_misc_suite
 preserveOutput = args.preserve_output
 outFilePath = " "
 
-if testType == TestType.UNIT_TEST.value and batchSize != 3:
+if testType == 0 and batchSize != 3:
     print("QA mode can only run with a batch size of 3.")
     exit(0)
 if preserveOutput == 0:
     validate_and_remove_folders(outFolderPath, "QA_RESULTS_MISC_HOST")
     validate_and_remove_folders(outFolderPath, "OUTPUT_PERFORMANCE_MISC_LOGS_HOST")
 
-if(testType == TestType.UNIT_TEST.value):
+if(testType == 0):
     outFilePath = outFolderPath + '/QA_RESULTS_MISC_HOST_' + timestamp
     numRuns = 1
-elif(testType == TestType.PERFORMANCE_TEST.value):
+elif(testType == 1):
     if "--num_runs" not in sys.argv:
         numRuns = 100   #default numRuns for running performance tests
     outFilePath = outFolderPath + '/OUTPUT_PERFORMANCE_MISC_LOGS_HOST_' + timestamp
@@ -222,11 +190,7 @@ subprocess.call(["make", "-j16"], cwd=".")    # nosec
 
 supportedCaseList = [key for key, values in miscAugmentationMap.items() if "HOST" in values]
 noCaseSupported = all(int(case) not in supportedCaseList for case in caseList)
-<<<<<<< HEAD
 broadcastableCases = ["tensor_add_tensor", "tensor_subtract_tensor", "tensor_multiply_tensor", "tensor_divide_tensor"] # Add other broadcast functions here
-=======
-
->>>>>>> abishek/ar/test_suite_upgrade_11_misc_suite
 if noCaseSupported:
     print("\ncase numbers %s are not supported" % caseList)
     exit(0)
@@ -234,7 +198,6 @@ for case in caseList:
     if int(case) not in miscAugmentationMap:
         continue
     for numDims in numDimsList:
-<<<<<<< HEAD
         if miscAugmentationMap[int(case)][0] == "transpose":
             for transposeOrder in range(1, numDims):
                 run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, transposeOrder)
@@ -247,21 +210,6 @@ for case in caseList:
         elif miscAugmentationMap[int(case)][0] in broadcastableCases:
             for broadcastFlag in broadcast:
                 run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, broadcastFlag)
-=======
-        # Runs transpose functionality for all transposeOrder values ranging from 1 to numDims - 1
-        if miscAugmentationMap[int(case)][0] == "transpose":
-            for transposeOrder in range(1, numDims):
-                run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, transposeOrder)
-        # Runs normalize functionality for all axisMask values - 1 to 2^numDims - 1
-        elif miscAugmentationMap[int(case)][0] == "normalize":
-            for axisMask in range(1, pow(2, numDims)):
-                run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, axisMask)
-        # Runs concat functionality for all axisMask values - 0 to numDims - 1
-        elif miscAugmentationMap[int(case)][0] == "concat":
-            for axisMask in range(0, numDims):
-                run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath, axisMask)
-        # Runs all other functionalities
->>>>>>> abishek/ar/test_suite_upgrade_11_misc_suite
         else:
             run_test(loggingFolder, numDims, case, numRuns, testType, toggle, batchSize, outFilePath)
 
@@ -272,7 +220,7 @@ for num in caseList:
     if int(num) in miscAugmentationMap:
         supportedCases += 1
 caseInfo = "Tests are run for " + str(supportedCases) + " supported cases out of the " + str(len(caseList)) + " cases requested"
-if testType == TestType.UNIT_TEST.value:
+if testType == 0:
     qaFilePath = os.path.join(outFilePath, "QA_results.txt")
     checkFile = os.path.isfile(qaFilePath)
     if checkFile:
@@ -280,7 +228,7 @@ if testType == TestType.UNIT_TEST.value:
         print_qa_tests_summary(qaFilePath, supportedCaseList, nonQACaseList, "Tensor_misc_host")
 
 # Performance tests
-if (testType == TestType.PERFORMANCE_TEST.value):
+if (testType == 1):
     logFileList = get_log_file_list()
     functionalityGroupList = ["statiscal_operations"]
 
