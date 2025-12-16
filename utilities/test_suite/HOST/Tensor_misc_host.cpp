@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     }
     else if(testCase == TENSOR_DIVIDE_TENSOR && bitDepth == 4)
     {
-        set_generic_descriptor(srcDescriptorPtrND, nDim, offSetInBytes, 4, batchSize, roiTensor);
+        set_generic_descriptor(srcDescriptorPtrND, nDim, offSetInBytes, 0, batchSize, roiTensor);
         set_generic_descriptor(dstDescriptorPtrND, nDim, offSetInBytes, 2, batchSize, dstRoiTensor);
     }
     else if(testCase == TENSOR_DIVIDE_TENSOR)
@@ -149,7 +149,10 @@ int main(int argc, char **argv)
     if(testCase == CONCAT || broadCastCase)
     {
         srcDescriptorPtrNDSecond = &srcDescriptorSecond;
-        set_generic_descriptor(srcDescriptorPtrNDSecond, nDim, offSetInBytes, bitDepth, batchSize, roiTensorSecond);
+        int secondBitDepth = bitDepth;
+        if(testCase == TENSOR_DIVIDE_TENSOR && bitDepth == 4)
+            secondBitDepth = 0;
+        set_generic_descriptor(srcDescriptorPtrNDSecond, nDim, offSetInBytes, secondBitDepth, batchSize, roiTensorSecond);
         set_generic_descriptor_layout(srcDescriptorPtrNDSecond, dstDescriptorPtrND, nDim, toggle, qaMode);
     }
     Rpp32u iBufferSize = 1;

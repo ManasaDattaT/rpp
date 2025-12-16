@@ -98,12 +98,23 @@ string get_path(Rpp32u nDim, Rpp32u readType, string scriptPath, string testCase
     else if (readType == 1) // Output
     {
         folderPath = "/../REFERENCE_OUTPUTS_MISC/" + testCase + "/";
-        if(broadCastFlag == 1)
+
+        // For broadcast arithmetic tensor ops in 2D/3D/4D QA, use a single combined bin per bit depth
+        if(((testCase == "tensor_add_tensor") ||
+            (testCase == "tensor_subtract_tensor") ||
+            (testCase == "tensor_multiply_tensor") ||
+            (testCase == "tensor_divide_tensor")) &&
+           (nDim >= 2) && (nDim <= 4) && (broadCastFlag == 3))
+        {
+            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + "_combined.bin";
+        }
+        else if(broadCastFlag == 1)
             suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output2_" + bitDepthStr + ".bin";
         else if(broadCastFlag == 2)
             suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output1_" + bitDepthStr + ".bin";
-         else
-            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";    }
+        else
+            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
+    }
     return scriptPath + folderPath + suffix;
 }
 
@@ -642,14 +653,23 @@ void compare_output(void *output, Rpp32u nDim, Rpp32u batchSize, Rpp32u bitDepth
         default: std::cerr << "ERROR: Invalid bitDepth specified!" << std::endl; return;
     }
     Rpp32u goldenOutputLength;
+    int refBroadCastFlag = broadCastFlag;
+    // For broadcast arithmetic ops (tensor_add/subtract/multiply/divide) in 2D/3D/4D,
+    // always read from a single combined reference bin (broadCastFlag = 3)
+    if(((testCase == "tensor_add_tensor") ||
+        (testCase == "tensor_subtract_tensor") ||
+        (testCase == "tensor_multiply_tensor") ||
+        (testCase == "tensor_divide_tensor")) &&
+       (nDim >= 2) && (nDim <= 4))
+        refBroadCastFlag = 3;
     if(testCase == "log")
         goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, 2);
     else if(testCase == "tensor_and_tensor" || testCase == "tensor_or_tensor" || testCase == "tensor_xor_tensor")
         goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth, broadCastFlag);
     else
-        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth);
+        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth, refBroadCastFlag);
     void *refOutput = calloc(goldenOutputLength, get_size_of_data_type(dataType));
-    read_data(refOutput, nDim, 1, scriptPath, testCase, bitDepth, broadCastFlag);
+    read_data(refOutput, nDim, 1, scriptPath, testCase, bitDepth, refBroadCastFlag);
     int subVariantStride = 0;
     if(testCase == "normalize")
     {
@@ -666,6 +686,15 @@ void compare_output(void *output, Rpp32u nDim, Rpp32u batchSize, Rpp32u bitDepth
     else if(testCase == "concat")
     {
         subVariantStride = additionalParam * bufferLength;
+    }
+    else if(((testCase == "tensor_add_tensor") ||
+             (testCase == "tensor_subtract_tensor") ||
+             (testCase == "tensor_multiply_tensor") ||
+             (testCase == "tensor_divide_tensor")) &&
+            (nDim >= 2) && (nDim <= 4))
+    {
+        // 3 broadcast sub-variants are packed sequentially: no-broadcast, broadcast_input2, broadcast_input1
+        subVariantStride = broadCastFlag * bufferLength;
     }
 
     int sampleLength = bufferLength / batchSize;
