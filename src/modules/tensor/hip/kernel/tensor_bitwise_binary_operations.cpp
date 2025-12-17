@@ -2,33 +2,7 @@
 #include "rpp_hip_math.hpp"
 #include <omp.h>
 
-// -------------------- Set 1 - scalar helper kernels --------------------
-
-// Functor for bitwise AND operation
-template <typename T>
-struct BitwiseAnd {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a & b;
-    }
-};
-
-// Functor for bitwise OR operation
-template <typename T>
-struct BitwiseOr {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a | b;
-    }
-};
-
-// Functor for bitwise XOR operation
-template <typename T>
-struct BitwiseXor {
-    __device__ __forceinline__ T operator()(T a, T b) const {
-        return a ^ b;
-    }
-};
-
-// -------------------- Set 2 - vector helper kernels --------------------
+// -------------------- Set 1 - vector helper kernels --------------------
 
 // Structures to Dispatch load/store functions for uchar/ushort/uint types
 template <typename T> struct BitwiseLoadStoreExecute;
@@ -58,11 +32,30 @@ template<> struct BitwiseLoadStoreExecute<uint>
 };
 
 // Structures used to dispatch execution of bitwise operations (AND, OR, XOR)
-template<typename VectorType, typename OpInstance> struct BitwiseOperationExecute;
+template<typename VectorType, typename Operation> struct BitwiseOperationExecute;
 
-template<typename VectorType, typename T> struct BitwiseOperationExecute<VectorType, BitwiseOr<T>>  { __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_bitwiseOr8 (a, b, c);} };
-template<typename VectorType, typename T> struct BitwiseOperationExecute<VectorType, BitwiseXor<T>> { __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_bitwiseXor8(a, b, c);} };
-template<typename VectorType, typename T> struct BitwiseOperationExecute<VectorType, BitwiseAnd<T>> { __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c){ rpp_hip_math_bitwiseAnd8(a, b, c);} };
+template<typename VectorType> struct BitwiseOperationExecute<VectorType, BitwiseOr>
+{
+    __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_bitwiseOr8 (a, b, c);
+    }
+};
+
+template<typename VectorType> struct BitwiseOperationExecute<VectorType, BitwiseXor>
+{
+    __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_bitwiseXor8(a, b, c);
+    }
+};
+template<typename VectorType> struct BitwiseOperationExecute<VectorType, BitwiseAnd>
+{
+    __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
+    {
+        rpp_hip_math_bitwiseAnd8(a, b, c);
+    }
+};
 
 // -------------------- Set 2 - bitwise operation kernels --------------------
 
@@ -130,7 +123,7 @@ __global__ void tensor_or_tensor_1d_hip_tensor(T *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 }
@@ -235,7 +228,7 @@ __global__ void tensor_or_tensor_2d_hip_tensor(T *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 }
@@ -339,7 +332,7 @@ __global__ void tensor_or_tensor_3d_hip_tensor(T *srcPtr1,
             uint dstIdx = dstBaseIdx + id_x;
 
             id_x++;
-            dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+            dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
         }
     }
 }
@@ -424,7 +417,7 @@ __global__ void tensor_or_tensor_nd_hip_tensor(T *srcPtr1,
     srcIdx1 += src1BeginOffsets[id_z];
     srcIdx2 += src2BeginOffsets[id_z];
 
-    dstPtr[dstIdx] = op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
+    dstPtr[dstIdx] = Operation::op(srcPtr1[srcIdx1], srcPtr2[srcIdx2]);
 }
 
 template <typename T, typename Operation>
@@ -850,13 +843,13 @@ RppStatus tensor_binary_bitwise_op_dispatch_gpu_tensor(T *srcPtr1,
         switch(tensorOp)
         {
             case RPP_TENSOR_OP_AND:
-                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseAnd<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseAnd(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_OR:
-                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseOr<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseOr(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_XOR:
-                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseXor<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseXor(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
         }
     }
@@ -865,13 +858,13 @@ RppStatus tensor_binary_bitwise_op_dispatch_gpu_tensor(T *srcPtr1,
         switch(tensorOp)
         {
             case RPP_TENSOR_OP_AND:
-                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseAnd<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseAnd(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_OR:
-                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseOr<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseOr(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
             case RPP_TENSOR_OP_XOR:
-                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseXor<T>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
+                hip_exec_tensor_non_broadcast_binary_bitwise_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, BitwiseXor(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                 break;
         }
     }

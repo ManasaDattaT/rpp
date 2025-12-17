@@ -26,6 +26,34 @@ SOFTWARE.
 #define RPP_HIP_MATH_HPP
 #define RPP_HIP_MATH_DEPENDENCIES
 
+// Functor for bitwise AND operation
+struct BitwiseAnd {
+    template <typename T>
+    __device__ __forceinline__ static T op(T a, T b)
+    {
+        return a & b;
+    }
+};
+
+// Functor for bitwise OR operation
+struct BitwiseOr {
+    template <typename T>
+    __device__ __forceinline__ static T op(T a, T b)
+    {
+        return a | b;
+    }
+};
+
+// Functor for bitwise XOR operation
+struct BitwiseXor {
+    template <typename T>
+    __device__ __forceinline__ static T op(T a, T b)
+    {
+        return a ^ b;
+    }
+};
+
+
 // /******************** DEVICE MATH HELPER FUNCTIONS ********************/
 
 // float8 min
