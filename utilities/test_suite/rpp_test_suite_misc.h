@@ -99,14 +99,14 @@ string get_path(Rpp32u nDim, Rpp32u readType, string scriptPath, string testCase
     {
         folderPath = "/../REFERENCE_OUTPUTS_MISC/" + testCase + "/";
 
-        // For broadcast arithmetic tensor ops in 2D/3D/4D QA, use a single combined bin per bit depth
+        // For broadcast arithmetic tensor ops in 2D/3D/4D QA, reuse the base output bin (contains all variants)
         if(((testCase == "tensor_add_tensor") ||
             (testCase == "tensor_subtract_tensor") ||
             (testCase == "tensor_multiply_tensor") ||
             (testCase == "tensor_divide_tensor")) &&
            (nDim >= 2) && (nDim <= 4) && (broadCastFlag == 3))
         {
-            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + "_combined.bin";
+            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
         }
         else if(broadCastFlag == 1)
             suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output2_" + bitDepthStr + ".bin";
