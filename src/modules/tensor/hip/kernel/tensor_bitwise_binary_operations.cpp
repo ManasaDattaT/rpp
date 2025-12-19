@@ -38,7 +38,7 @@ template<typename VectorType> struct BitwiseOperationExecute<VectorType, Bitwise
 {
     __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_bitwiseOr8 (a, b, c);
+        rpp_hip_math_bitwise_op8<BitwiseOr>(a, b, c);
     }
 };
 
@@ -46,14 +46,14 @@ template<typename VectorType> struct BitwiseOperationExecute<VectorType, Bitwise
 {
     __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_bitwiseXor8(a, b, c);
+        rpp_hip_math_bitwise_op8<BitwiseXor>(a, b, c);
     }
 };
 template<typename VectorType> struct BitwiseOperationExecute<VectorType, BitwiseAnd>
 {
     __device__ __forceinline__ static void rpp_hip_math_bitwiseOp8(VectorType *a, VectorType *b, VectorType *c)
     {
-        rpp_hip_math_bitwiseAnd8(a, b, c);
+        rpp_hip_math_bitwise_op8<BitwiseAnd>(a, b, c);
     }
 };
 
@@ -683,8 +683,8 @@ RppStatus hip_exec_tensor_binary_bitwise_generic_tensor(T *srcPtr1,
                                srcPtr2 + (batchCount * srcGenericDescPtr2->strides[0]),
                                d_src1BroadcastStrides + batchCount * RPPT_MAX_DIMS,
                                d_src2BroadcastStrides + batchCount * RPPT_MAX_DIMS,
-                               *(d_src1BeginOffsets + batchCount),
-                               *(d_src2BeginOffsets + batchCount),
+                               src1BeginOffsets[batchCount],
+                               src2BeginOffsets[batchCount],
                                dstPtr + (batchCount * dstGenericDescPtr->strides[0]),
                                d_dstBroadcastStrides + batchCount * RPPT_MAX_DIMS,
                                d_dstBroadcastDims + batchCount * RPPT_MAX_DIMS,
