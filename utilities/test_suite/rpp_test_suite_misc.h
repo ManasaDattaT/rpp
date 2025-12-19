@@ -96,12 +96,11 @@ string get_path(Rpp32u nDim, Rpp32u readType, string scriptPath, string testCase
     else if (readType == 1) // Output
     {
         folderPath = "/../REFERENCE_OUTPUTS_MISC/" + testCase + "/";
-        if(broadCastFlag == 1)
-            suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output2_" + bitDepthStr + ".bin";
-        else if(broadCastFlag == 2)
-            suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output1_" + bitDepthStr + ".bin";
-         else
+        // Logical tensor ops use testCase prefix and bitDepth suffix; others use simple naming
+        if(testCase == "tensor_and_tensor" || testCase == "tensor_or_tensor" || testCase == "tensor_xor_tensor")
             suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
+        else
+            suffix = std::to_string(nDim) + "d_output.bin";
     }
     return scriptPath + folderPath + suffix;
 }
@@ -642,11 +641,9 @@ void compare_output(void *output, Rpp32u nDim, Rpp32u batchSize, Rpp32u bitDepth
     }
     Rpp32u goldenOutputLength;
     if(testCase == "log")
-        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, 2);
-    else if(testCase == "tensor_and_tensor" || testCase == "tensor_or_tensor" || testCase == "tensor_xor_tensor")
-        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth, broadCastFlag);
+        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, 2, broadCastFlag);
     else
-        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth);
+        goldenOutputLength = get_bin_size(nDim, 1, scriptPath, testCase, bitDepth, broadCastFlag);
     void *refOutput = calloc(goldenOutputLength, get_size_of_data_type(dataType));
     read_data(refOutput, nDim, 1, scriptPath, testCase, bitDepth, broadCastFlag);
     int subVariantStride = 0;
@@ -666,7 +663,11 @@ void compare_output(void *output, Rpp32u nDim, Rpp32u batchSize, Rpp32u bitDepth
     {
         subVariantStride = additionalParam * bufferLength;
     }
-
+    else if((testCase == "tensor_and_tensor" || testCase == "tensor_or_tensor" || testCase == "tensor_xor_tensor") &&
+            (nDim >= 2) && (nDim <= 4))
+    {
+        subVariantStride = broadCastFlag * bufferLength;
+    }
     int sampleLength = bufferLength / batchSize;
     int fileMatch = 0;
     for(int i = 0; i < batchSize; i++)
