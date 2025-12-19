@@ -99,21 +99,7 @@ string get_path(Rpp32u nDim, Rpp32u readType, string scriptPath, string testCase
     {
         folderPath = "/../REFERENCE_OUTPUTS_MISC/" + testCase + "/";
 
-        // For broadcast arithmetic tensor ops in 2D/3D/4D QA, reuse the base output bin (contains all variants)
-        if(((testCase == "tensor_add_tensor") ||
-            (testCase == "tensor_subtract_tensor") ||
-            (testCase == "tensor_multiply_tensor") ||
-            (testCase == "tensor_divide_tensor")) &&
-           (nDim >= 2) && (nDim <= 4) && (broadCastFlag == 3))
-        {
-            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
-        }
-        else if(broadCastFlag == 1)
-            suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output2_" + bitDepthStr + ".bin";
-        else if(broadCastFlag == 2)
-            suffix = testCase + "_" + std::to_string(nDim) + "d_broadcast_output1_" + bitDepthStr + ".bin";
-        else
-            suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
+        suffix = testCase + "_" + std::to_string(nDim) + "d_output_" + bitDepthStr + ".bin";
     }
 
     return scriptPath + folderPath + suffix;
@@ -534,7 +520,7 @@ inline void convert_input_bitdepth(Rpp32f *inputF32, Rpp32f *inputF32Second, voi
         for(Rpp32s i = 0; i < ioBufferSize; i++)
             outputU8[i] = static_cast<Rpp8u>(std::clamp(std::round(inputF32[i]), 0.0f, 255.0f));
 
-        if(testCase == CONCAT)
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
         {
             Rpp8u *outputU8Second = static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes;
             for (Rpp32s i = 0; i < ioBufferSizeSecond; i++)
@@ -547,7 +533,7 @@ inline void convert_input_bitdepth(Rpp32f *inputF32, Rpp32f *inputF32Second, voi
         for (Rpp32s i = 0; i < ioBufferSize; i++)
             outputF16[i] = static_cast<Rpp16f>(std::clamp(inputF32[i], -65504.0f, 65504.0f)); // F16 range
 
-        if(testCase == CONCAT)
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
         {
             Rpp16f *outputF16Second = reinterpret_cast<Rpp16f *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
             for (Rpp32s i = 0; i < ioBufferSizeSecond; i++)
@@ -557,7 +543,7 @@ inline void convert_input_bitdepth(Rpp32f *inputF32, Rpp32f *inputF32Second, voi
     else if(BitDepthTestMode == F32_TO_F32) // F32 case (No conversion needed)
     {
         memcpy(output, inputF32, outputBufferSize);
-        if(testCase == CONCAT)
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
             memcpy(outputSecond, inputF32Second, outputBufferSizeSecond);
     }
     else if(BitDepthTestMode == I8_TO_I8) // I8 case
@@ -566,11 +552,63 @@ inline void convert_input_bitdepth(Rpp32f *inputF32, Rpp32f *inputF32Second, voi
         for(int i = 0; i < ioBufferSize; i++)
             outputI8[i] = static_cast<Rpp8s>(std::clamp(std::round(inputF32[i]) - 128, -128.0f, 127.0f));
 
-        if(testCase == CONCAT)
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
         {
             Rpp8s *outputI8Second = static_cast<Rpp8s *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes;
             for (int i = 0; i < ioBufferSizeSecond; i++)
                 outputI8Second[i] = static_cast<Rpp8s>(std::clamp(std::round(inputF32Second[i]) - 128, -128.0f, 127.0f));
+        }
+    }
+    else if(BitDepthTestMode == I16_TO_I16) // I16 case
+    {
+        Rpp16s *outputI16 = reinterpret_cast<Rpp16s *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
+        for(int i = 0; i < ioBufferSize; i++)
+            outputI16[i] = static_cast<Rpp16s>(std::clamp(std::round(inputF32[i]), -32768.0f, 32767.0f));
+
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
+        {
+            Rpp16s *outputI16Second = reinterpret_cast<Rpp16s *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
+            for (int i = 0; i < ioBufferSizeSecond; i++)
+                outputI16Second[i] = static_cast<Rpp16s>(std::clamp(std::round(inputF32Second[i]), -32768.0f, 32767.0f));
+        }
+    }
+    else if(BitDepthTestMode == U16_TO_U16) // U16 case
+    {
+        Rpp16u *outputU16 = reinterpret_cast<Rpp16u *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
+        for(int i = 0; i < ioBufferSize; i++)
+            outputU16[i] = static_cast<Rpp16u>(std::clamp(std::round(inputF32[i]), 0.0f, 65535.0f));
+
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
+        {
+            Rpp16u *outputU16Second = reinterpret_cast<Rpp16u *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
+            for (int i = 0; i < ioBufferSizeSecond; i++)
+                outputU16Second[i] = static_cast<Rpp16u>(std::clamp(std::round(inputF32Second[i]), 0.0f, 65535.0f));
+        }
+    }
+    else if(BitDepthTestMode == I32_TO_I32) // I32 case
+    {
+        Rpp32s *outputI32 = reinterpret_cast<Rpp32s *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
+        for(int i = 0; i < ioBufferSize; i++)
+            outputI32[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32[i]), -2147483648.0f, 2147483647.0f));
+
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
+        {
+            Rpp32s *outputI32Second = reinterpret_cast<Rpp32s *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
+            for (int i = 0; i < ioBufferSizeSecond; i++)
+                outputI32Second[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32Second[i]), -2147483648.0f, 2147483647.0f));
+        }
+    }
+    else if(BitDepthTestMode == U32_TO_U32) // U32 case
+    {
+        Rpp32u *outputU32 = reinterpret_cast<Rpp32u *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
+        for(int i = 0; i < ioBufferSize; i++)
+            outputU32[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32[i]), 0.0f, 4294967295.0f));
+
+        if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
+        {
+            Rpp32u *outputU32Second = reinterpret_cast<Rpp32u *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
+            for (int i = 0; i < ioBufferSizeSecond; i++)
+                outputU32Second[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32Second[i]), 0.0f, 4294967295.0f));
         }
     }
 }
