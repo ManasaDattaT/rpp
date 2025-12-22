@@ -51,7 +51,10 @@ enum BitDepthTestMode
     I32_TO_I32 = 9,  // Input: I32 -> Output: I32
     U32_TO_U32 = 10, // Input: U32 -> Output: U32
     I8_TO_F32  = 11, // Input: I8  -> Output: F32
-    I16_TO_F32 = 12  // Input: I16 -> Output: F32
+    I16_TO_F32 = 12, // Input: I16 -> Output: F32
+    U16_TO_F32 = 13, // Input: U16 -> Output: F32
+    U32_TO_F32 = 14, // Input: U32 -> Output: F32
+    I32_TO_F32 = 15  // Input: I32 -> Output: F32
 };
 
 // Enum representing different test types

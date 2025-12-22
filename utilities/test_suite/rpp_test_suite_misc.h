@@ -505,6 +505,14 @@ inline size_t get_size_of_data_type(RpptDataType dataType)
         return sizeof(Rpp32f);
     else if(dataType == RpptDataType::I16)
         return sizeof(Rpp16s);
+    else if(dataType == RpptDataType::I16)
+        return sizeof(Rpp16s);
+    else if(dataType == RpptDataType::U16)
+        return sizeof(Rpp16u);
+    else if(dataType == RpptDataType::I32)
+        return sizeof(Rpp32s);
+    else if(dataType == RpptDataType::U32)
+        return sizeof(Rpp32u);
     else
         return 0;
 }
@@ -589,26 +597,26 @@ inline void convert_input_bitdepth(Rpp32f *inputF32, Rpp32f *inputF32Second, voi
     {
         Rpp32s *outputI32 = reinterpret_cast<Rpp32s *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
         for(int i = 0; i < ioBufferSize; i++)
-            outputI32[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32[i]), -2147483648.0f, 2147483647.0f));
+            outputI32[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32[i]), -131072.0f, -131071.0f));
 
         if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
         {
             Rpp32s *outputI32Second = reinterpret_cast<Rpp32s *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
             for (int i = 0; i < ioBufferSizeSecond; i++)
-                outputI32Second[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32Second[i]), -2147483648.0f, 2147483647.0f));
+                outputI32Second[i] = static_cast<Rpp32s>(std::clamp(std::round(inputF32Second[i]), -131071.0f, 131071.0f));
         }
     }
     else if(BitDepthTestMode == U32_TO_U32) // U32 case
     {
         Rpp32u *outputU32 = reinterpret_cast<Rpp32u *>(static_cast<Rpp8u *>(output) + srcGenericDescPtr->offsetInBytes);
         for(int i = 0; i < ioBufferSize; i++)
-            outputU32[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32[i]), 0.0f, 4294967295.0f));
+            outputU32[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32[i]), 0.0f, 262143.0f));
 
         if(testCase == CONCAT || testCase == TENSOR_ADD_TENSOR || testCase == TENSOR_SUBTRACT_TENSOR || testCase == TENSOR_MULTIPLY_TENSOR || testCase == TENSOR_DIVIDE_TENSOR)
         {
             Rpp32u *outputU32Second = reinterpret_cast<Rpp32u *>(static_cast<Rpp8u *>(outputSecond) + srcDescriptorPtrNDSecond->offsetInBytes);
             for (int i = 0; i < ioBufferSizeSecond; i++)
-                outputU32Second[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32Second[i]), 0.0f, 4294967295.0f));
+                outputU32Second[i] = static_cast<Rpp32u>(std::clamp(std::round(inputF32Second[i]), 0.0f, 262143.0f));
         }
     }
 }

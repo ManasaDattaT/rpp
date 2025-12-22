@@ -75,8 +75,15 @@ int main(int argc, char **argv)
         case U8_TO_F32: bitdepthStr = "u8_f32"; break;
         case I8_TO_I8: bitdepthStr = "i8"; break;
         case U8_TO_I8: bitdepthStr = "u8_i8"; break;
+        case I16_TO_I16: bitdepthStr = "i16_i16"; break;
+        case U16_TO_U16: bitdepthStr = "u16_u16"; break;
+        case I32_TO_I32: bitdepthStr = "i32_i32"; break;
+        case U32_TO_U32: bitdepthStr = "u32_u32"; break;
         case I8_TO_F32: bitdepthStr = "i8_f32"; break;
         case I16_TO_F32: bitdepthStr = "i16_f32"; break;
+        case U16_TO_F32: bitdepthStr = "u16_to_f32"; break;
+        case U32_TO_F32: bitdepthStr = "u32_to_f32"; break;
+        case I32_TO_F32: bitdepthStr = "i32_to_f32"; break;
         default: bitdepthStr = "unknown"; break;
     }
 
@@ -200,14 +207,19 @@ int main(int argc, char **argv)
         outputF32 = static_cast<Rpp32f *>(calloc(oBufferSize, sizeof(Rpp32f)));
         if((testCase == CONCAT) || (broadCastCase))
             inputF32Second = static_cast<Rpp32f *>(calloc(iBufferSizeSecond, sizeof(Rpp32f)));
+        Rpp32u valLimit = 255;
+        if((BitDepthTestMode == I16_TO_I16) || (BitDepthTestMode == U16_TO_U16))
+            valLimit = 65535;
+        if((BitDepthTestMode == I32_TO_I32) || (BitDepthTestMode == U32_TO_U32))
+            valLimit = 262143;
 
         std::srand(0);
         for(int i = 0; i < iBufferSize; i++)
-            inputF32[i] = static_cast<float>(std::rand() % 255);
+            inputF32[i] = static_cast<float>(std::rand() % valLimit);
         if((testCase == CONCAT) || (broadCastCase))
         {
             for(int i = 0; i < iBufferSizeSecond; i++)
-                inputF32Second[i] = static_cast<float>(std::rand() % 255);
+                inputF32Second[i] = static_cast<float>(std::rand() % valLimit);
         }
 
         convert_input_bitdepth(inputF32, inputF32Second, input, inputSecond, BitDepthTestMode, iBufferSize, iBufferSizeSecond, iBufferSizeInBytes, iBufferSizeSecondInBytes, srcDescriptorPtrND, srcDescriptorPtrNDSecond, testCase);
@@ -341,7 +353,7 @@ int main(int argc, char **argv)
                 testCaseName  = "tensor_add_tensor";
 
                 startWallTime = omp_get_wtime();
-                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == U8_TO_F32)
+                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == I16_TO_I16 || BitDepthTestMode == U16_TO_U16 || BitDepthTestMode == I32_TO_I32 || BitDepthTestMode == U32_TO_U32)
                 {
                     if(broadCastFlag == 0)
                         rppt_tensor_add_tensor_host(input, inputSecond, srcDescriptorPtrND, srcDescriptorPtrNDSecond, output, dstDescriptorPtrND, RPP_BROADCAST_DISABLE, roiTensor, roiTensorSecond, handle);
@@ -360,7 +372,7 @@ int main(int argc, char **argv)
                 testCaseName  = "tensor_subtract_tensor";
 
                 startWallTime = omp_get_wtime();
-                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == U8_TO_F32)
+                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == I16_TO_I16 || BitDepthTestMode == U16_TO_U16 || BitDepthTestMode == I32_TO_I32 || BitDepthTestMode == U32_TO_U32)
                 {
                     if(broadCastFlag == 0)
                         rppt_tensor_subtract_tensor_host(input, inputSecond, srcDescriptorPtrND, srcDescriptorPtrNDSecond, output, dstDescriptorPtrND, RPP_BROADCAST_DISABLE, roiTensor, roiTensorSecond, handle);
@@ -379,7 +391,7 @@ int main(int argc, char **argv)
                 testCaseName  = "tensor_multiply_tensor";
 
                 startWallTime = omp_get_wtime();
-                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == U8_TO_F32)
+                if(BitDepthTestMode == U8_TO_U8 || BitDepthTestMode == F16_TO_F16 || BitDepthTestMode == F32_TO_F32 || BitDepthTestMode == I8_TO_I8 || BitDepthTestMode == I16_TO_I16 || BitDepthTestMode == U16_TO_U16 || BitDepthTestMode == I32_TO_I32 || BitDepthTestMode == U32_TO_U32)
                 {
                     if(broadCastFlag == 0)
                         rppt_tensor_multiply_tensor_host(input, inputSecond, srcDescriptorPtrND, srcDescriptorPtrNDSecond, output, dstDescriptorPtrND, RPP_BROADCAST_DISABLE, roiTensor, roiTensorSecond, handle);
