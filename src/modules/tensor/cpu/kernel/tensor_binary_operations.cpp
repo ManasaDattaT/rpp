@@ -808,6 +808,9 @@ RppStatus tensor_binary_op_dispatch_f32_f32_host_tensor(Rpp32f *srcPtr1,
         case RPP_TENSOR_OP_DIVIDE:
             tensor_binary_op_f32_f32_host_tensor<Divide<Rpp32f, Rpp32f>>(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, Divide<Rpp32f, Rpp32f>{}, broadcastMode, srcPtr1roiTensor, srcPtr2roiTensor, handle);
             break;
+        default :
+            printf("Operation not supported\n");
+            break;
     }
 
     return RPP_SUCCESS;

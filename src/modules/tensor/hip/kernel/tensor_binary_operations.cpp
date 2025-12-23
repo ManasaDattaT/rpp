@@ -913,6 +913,9 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
                 case RPP_TENSOR_OP_MULTIPLY:
                     hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
+                case RPP_TENSOR_OP_DIVIDE:
+                    //Empty case - Will be handled in the switch case below
+                    break;
                 default :
                     printf("Operation not supported\n");
                     break;
@@ -922,6 +925,11 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
         {
             switch(tensorOp)
             {
+                // Add, Subtract and Multiply have only F32_TO_F32 support which is handled in the above switch case
+                case RPP_TENSOR_OP_ADD:
+                case RPP_TENSOR_OP_SUBTRACT:
+                case RPP_TENSOR_OP_MULTIPLY:
+                    break;
                 case RPP_TENSOR_OP_DIVIDE:
                     hip_exec_tensor_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticDivide<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
@@ -946,6 +954,9 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
                 case RPP_TENSOR_OP_MULTIPLY:
                     hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticMultiply(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
+                case RPP_TENSOR_OP_DIVIDE:
+                    //Empty case - Will be handled in the switch case below
+                    break;
                 default :
                     printf("Operation not supported\n");
                     break;
@@ -955,6 +966,11 @@ RppStatus tensor_binary_arithmetic_op_dispatch_gpu_tensor(T1 *srcPtr1,
         {
             switch(tensorOp)
             {
+                // Add, Subtract and Multiply have only F32_TO_F32 support which is handled in the above switch case
+                case RPP_TENSOR_OP_ADD:
+                case RPP_TENSOR_OP_SUBTRACT:
+                case RPP_TENSOR_OP_MULTIPLY:
+                    break;
                 case RPP_TENSOR_OP_DIVIDE:
                     hip_exec_tensor_non_broadcast_binary_arithmetic_generic_tensor(srcPtr1, srcPtr2, srcPtr1GenericDescPtr, srcPtr2GenericDescPtr, dstPtr, dstGenericDescPtr, ArithmeticDivide<T1>(), srcPtr1roiTensor, srcPtr2roiTensor, handle);
                     break;
