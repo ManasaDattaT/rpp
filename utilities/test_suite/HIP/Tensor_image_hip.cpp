@@ -1759,7 +1759,6 @@ int main(int argc, char **argv)
                     for (i = 0; i < batchSize; i++)
                     {
                         strength[i] = 1.0f;
-                        
                     }
 
                     if (borderType != RpptImageBorderType::REPLICATE)

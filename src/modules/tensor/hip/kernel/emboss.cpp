@@ -2043,7 +2043,6 @@ RppStatus hip_exec_emboss_tensor(T *srcPtr,
                                  T *dstPtr,
                                  RpptDescPtr dstDescPtr,
                                  Rpp32f *strength,
-                                 
                                  Rpp32u kernelSize,
                                  RpptROIPtr roiTensorPtrSrc,
                                  RpptRoiType roiType,
