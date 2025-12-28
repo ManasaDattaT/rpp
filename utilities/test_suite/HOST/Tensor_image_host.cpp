@@ -1765,7 +1765,7 @@ int main(int argc, char **argv)
                         strength[i] = 1.0f;
                     }
 
-                   if (borderType != RpptImageBorderType::REPLICATE)
+                    if (borderType != RpptImageBorderType::REPLICATE)
                     {
                         missingFuncFlag = 1;
                         break;

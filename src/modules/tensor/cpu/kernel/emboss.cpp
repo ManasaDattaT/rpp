@@ -27,6 +27,7 @@ SOFTWARE.
 
 inline void create_emboss_kernel_host(Rpp32f* filter, Rpp32f strength, int kernelSize)
 {
+    // Maximum emboss strength, input values above this are clamped to avoid artifacts.
     Rpp32f clampedStrength = (strength > 2.0f) ? 2.0f : strength;
 
     if (kernelSize == 3)

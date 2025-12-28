@@ -115,7 +115,7 @@ inline void convolution_filter_generic_tensor(T **srcPtrTemp, T *dstPtrTemp, Rpp
                     pixel = static_cast<Rpp32f>(srcPtrTemp[rowOffset][colOffset * channels]);
 
                 // Apply filter
-                accum = std::fmaf(pixel,filterTensor[filterRowOffset + j], accum);
+                accum = std::fmaf(pixel, filterTensor[filterRowOffset + j], accum);
             }
         }
     }
@@ -387,7 +387,7 @@ inline void permute_blend_add_3x3(__m256 &pDst, __m256 pRow0, __m256 pRow1, __m2
     pDst = _mm256_fmadd_ps(_mm256_permutevar8x32_ps(_mm256_blend_ps(pRow0, pRow1, blendMask2), pxMask[roatateMask2]), pFilter[2], pDst);
 }
 
-inline void permute_blend_add_5x5_pln(__m256 &pDst, __m256 pRow0, __m256 pRow1, __m256 *pFilter, bool debug=false)
+inline void permute_blend_add_5x5_pln(__m256 &pDst, __m256 pRow0, __m256 pRow1, __m256 *pFilter)
 {
     pDst = _mm256_fmadd_ps(pRow0, pFilter[0], pDst);
     pDst = _mm256_fmadd_ps(_mm256_permutevar8x32_ps(_mm256_blend_ps(pRow0, pRow1, 1), avx_pxMaskRotate0To1), pFilter[1], pDst);
